@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Mappa Interattiva VTT - Con Salvataggio</title>
+    <title>Mappa Interattiva VTT - Testo e Salvataggio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     
     <style>
@@ -25,7 +25,7 @@
             gap: 15px; 
             align-items: center; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            flex-wrap: wrap; /* Permette ai bottoni di andare a capo se non c'è spazio */
+            flex-wrap: wrap; 
             justify-content: center;
         }
         button { 
@@ -43,7 +43,10 @@
         #btn-elimina { background: #f44336; }
         #btn-elimina:hover { background: #da190b; }
         
-        /* Stili per i nuovi bottoni di salvataggio */
+        /* Bottone per il testo */
+        #btn-testo { background: #9c27b0; }
+        #btn-testo:hover { background: #7b1fa2; }
+
         #btn-salva { background: #2196F3; margin-left: 20px; }
         #btn-salva:hover { background: #0b7dda; }
         #btn-carica { background: #FF9800; }
@@ -51,13 +54,18 @@
 
         input[type="color"] { cursor: pointer; border: none; background: transparent; height: 30px; width: 30px; }
         .canvas-container { border: 3px solid #555; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        
+        /* Istruzioni a schermo */
+        .istruzioni { margin-top: 10px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
 
     <div id="pannello-controllo">
-        <button onclick="aggiungiCerchio()">🟢 Aggiungi Cerchio</button>
-        <button onclick="aggiungiQuadrato()">🟦 Aggiungi Quadrato</button>
+        <button onclick="aggiungiCerchio()">🟢 Cerchio</button>
+        <button onclick="aggiungiQuadrato()">🟦 Quadrato</button>
+        
+        <button id="btn-testo" onclick="aggiungiTesto()">📝 Aggiungi Testo</button>
         
         <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 15px;">
             <label for="sceltaColore">🎨 Colore:</label>
@@ -71,10 +79,13 @@
     </div>
 
     <canvas id="tavoloCanvas" width="1050" height="700"></canvas>
+    
+    <div class="istruzioni">
+        💡 <b>Suggerimento per il testo:</b> Fai <b>doppio clic</b> sul testo per modificarlo. Premi <b>Canc/Delete</b> per eliminare un oggetto selezionato.
+    </div>
 
     <script>
         // --- CONFIGURAZIONE JSONBIN ---
-        // SOSTITUISCI QUESTE DUE VARIABILI CON I TUOI DATI DI JSONBIN.IO
         const JSONBIN_API_KEY = '$2a$10$NNi8R1qnzwGu64GesdAhaOF/x87LxLfTxK9flwDA7GVZZOqMSYqIK';
         const JSONBIN_BIN_ID = '6a525173f5f4af5e2981100f';
         // ------------------------------
@@ -82,7 +93,6 @@
         const canvas = new fabric.Canvas('tavoloCanvas');
         const urlMappa = 'https://i.imgur.com/6hndwGm.jpeg';
         
-        // Funzione per impostare lo sfondo (la usiamo sia all'inizio che dopo il caricamento)
         function impostaSfondo() {
             fabric.Image.fromURL(urlMappa, function(img) {
                 canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
@@ -92,7 +102,6 @@
             }, { crossOrigin: 'anonymous' });
         }
 
-        // Avviamo lo sfondo iniziale
         impostaSfondo();
 
         function aggiungiCerchio() {
@@ -115,6 +124,28 @@
             canvas.setActiveObject(quadrato);
         }
 
+        // --- NUOVA FUNZIONE PER IL TESTO ---
+        function aggiungiTesto() {
+            const colore = document.getElementById('sceltaColore').value;
+            const testo = new fabric.IText('Scrivi qui...', {
+                fontFamily: 'Arial',
+                fontSize: 24, // Dimensione del testo
+                fill: colore, // Usa il colore selezionato
+                left: 200, 
+                top: 100,
+                borderColor: '#ffffff', 
+                cornerColor: '#ffffff', 
+                cornerSize: 8, 
+                transparentCorners: false
+            });
+            canvas.add(testo);
+            canvas.setActiveObject(testo);
+            
+            // Entra automaticamente in modalità modifica appena lo crei (opzionale ma comodo)
+            testo.enterEditing();
+            testo.selectAll();
+        }
+
         function cambiaColore(nuovoColore) {
             const selezionati = canvas.getActiveObjects();
             selezionati.forEach(ogg => ogg.set('fill', nuovoColore));
@@ -127,17 +158,15 @@
             selezionati.forEach(ogg => canvas.remove(ogg));
         }
 
-        // --- NUOVE FUNZIONI CLOUD ---
+        // --- FUNZIONI CLOUD (Rimaste invariate) ---
 
         async function salvaMappaSuCloud() {
             if (JSONBIN_API_KEY.includes('INSERISCI')) {
-                alert("Devi prima inserire la tua API Key e il Bin ID nel codice per poter salvare!");
+                alert("Devi prima inserire la tua API Key!");
                 return;
             }
 
-            // canvas.toJSON() estrae matematicamente tutte le posizioni, colori e forme!
             const datiMappa = canvas.toJSON();
-            
             document.getElementById('btn-salva').innerText = "⏳ Salvataggio...";
 
             try {
@@ -165,7 +194,7 @@
 
         async function caricaMappaDaCloud() {
             if (JSONBIN_API_KEY.includes('INSERISCI')) {
-                alert("Devi prima inserire la tua API Key e il Bin ID nel codice per poter caricare!");
+                alert("Devi prima inserire la tua API Key!");
                 return;
             }
 
@@ -181,13 +210,10 @@
 
                 if (response.ok) {
                     const json = await response.json();
-                    // JSONBin v3 inserisce i dati dentro la proprietà "record"
                     const datiSalvati = json.record;
                     
-                    // Ripristiniamo la mappa dal JSON
                     canvas.loadFromJSON(datiSalvati, function() {
                         canvas.renderAll();
-                        // Riapplichiamo lo sfondo per sicurezza, casomai il link andasse perso nel JSON
                         impostaSfondo();
                         alert("✅ Mappa caricata con successo!");
                     });
@@ -202,7 +228,14 @@
             }
         }
 
+        // Questo controlla che non elimini per sbaglio il testo mentre lo stai scrivendo!
         window.addEventListener('keydown', function(event) {
+            // Controlla se stai modificando un testo. Se sì, non esegue l'eliminazione.
+            const oggettoAttivo = canvas.getActiveObject();
+            if (oggettoAttivo && oggettoAttivo.isEditing) {
+                return;
+            }
+
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 eliminaSelezionato();
             }
