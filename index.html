@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Mappa Interattiva VTT</title>
+    <title>Mappa Interattiva VTT - Con Salvataggio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     
     <style>
@@ -25,6 +25,8 @@
             gap: 15px; 
             align-items: center; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex-wrap: wrap; /* Permette ai bottoni di andare a capo se non c'è spazio */
+            justify-content: center;
         }
         button { 
             padding: 10px 15px; 
@@ -40,8 +42,14 @@
         button:hover { background: #45a049; transform: scale(1.05); }
         #btn-elimina { background: #f44336; }
         #btn-elimina:hover { background: #da190b; }
-        input[type="color"] { cursor: pointer; border: none; background: transparent; height: 30px; width: 30px; }
         
+        /* Stili per i nuovi bottoni di salvataggio */
+        #btn-salva { background: #2196F3; margin-left: 20px; }
+        #btn-salva:hover { background: #0b7dda; }
+        #btn-carica { background: #FF9800; }
+        #btn-carica:hover { background: #e68a00; }
+
+        input[type="color"] { cursor: pointer; border: none; background: transparent; height: 30px; width: 30px; }
         .canvas-container { border: 3px solid #555; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
     </style>
 </head>
@@ -56,75 +64,141 @@
             <input type="color" id="sceltaColore" value="#ff0000" onchange="cambiaColore(this.value)">
         </div>
 
-        <button id="btn-elimina" onclick="eliminaSelezionato()">🗑️ Elimina Selezionato</button>
+        <button id="btn-elimina" onclick="eliminaSelezionato()">🗑️ Elimina</button>
+
+        <button id="btn-salva" onclick="salvaMappaSuCloud()">💾 Salva Mappa</button>
+        <button id="btn-carica" onclick="caricaMappaDaCloud()">🔄 Carica Mappa</button>
     </div>
 
     <canvas id="tavoloCanvas" width="1050" height="700"></canvas>
 
     <script>
-        const canvas = new fabric.Canvas('tavoloCanvas');
+        // --- CONFIGURAZIONE JSONBIN ---
+        // SOSTITUISCI QUESTE DUE VARIABILI CON I TUOI DATI DI JSONBIN.IO
+        const JSONBIN_API_KEY = '$2a$10$NNi8R1qnzwGu64GesdAhaOF/x87LxLfTxK9flwDA7GVZZOqMSYqIK';
+        const JSONBIN_BIN_ID = '6a525173f5f4af5e2981100f';
+        // ------------------------------
 
-        // Carichiamo l'immagine direttamente dal link di Imgur
-        // NOTA: Abbiamo aggiunto { crossOrigin: 'anonymous' } per evitare blocchi di sicurezza del browser
+        const canvas = new fabric.Canvas('tavoloCanvas');
         const urlMappa = 'https://i.imgur.com/6hndwGm.jpeg';
         
-        fabric.Image.fromURL(urlMappa, function(img) {
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width / img.width,
-                scaleY: canvas.height / img.height
-            });
-        }, { crossOrigin: 'anonymous' });
+        // Funzione per impostare lo sfondo (la usiamo sia all'inizio che dopo il caricamento)
+        function impostaSfondo() {
+            fabric.Image.fromURL(urlMappa, function(img) {
+                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                    scaleX: canvas.width / img.width,
+                    scaleY: canvas.height / img.height
+                });
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        // Avviamo lo sfondo iniziale
+        impostaSfondo();
 
         function aggiungiCerchio() {
-            const coloreAttuale = document.getElementById('sceltaColore').value;
+            const colore = document.getElementById('sceltaColore').value;
             const cerchio = new fabric.Circle({
-                radius: 15,
-                fill: coloreAttuale,
-                left: 100, 
-                top: 100,  
-                borderColor: '#ffffff', 
-                cornerColor: '#ffffff', 
-                cornerSize: 8,
-                transparentCorners: false
+                radius: 15, fill: colore, left: 100, top: 100,  
+                borderColor: '#ffffff', cornerColor: '#ffffff', cornerSize: 8, transparentCorners: false
             });
             canvas.add(cerchio);
             canvas.setActiveObject(cerchio); 
         }
 
         function aggiungiQuadrato() {
-            const coloreAttuale = document.getElementById('sceltaColore').value;
+            const colore = document.getElementById('sceltaColore').value;
             const quadrato = new fabric.Rect({
-                width: 30,
-                height: 30,
-                fill: coloreAttuale,
-                left: 150, 
-                top: 100,  
-                borderColor: '#ffffff',
-                cornerColor: '#ffffff',
-                cornerSize: 8,
-                transparentCorners: false
+                width: 30, height: 30, fill: colore, left: 150, top: 100,  
+                borderColor: '#ffffff', cornerColor: '#ffffff', cornerSize: 8, transparentCorners: false
             });
             canvas.add(quadrato);
             canvas.setActiveObject(quadrato);
         }
 
         function cambiaColore(nuovoColore) {
-            const oggettiSelezionati = canvas.getActiveObjects();
-            if (oggettiSelezionati.length > 0) {
-                oggettiSelezionati.forEach(function(oggetto) {
-                    oggetto.set('fill', nuovoColore);
-                });
-                canvas.renderAll(); 
-            }
+            const selezionati = canvas.getActiveObjects();
+            selezionati.forEach(ogg => ogg.set('fill', nuovoColore));
+            canvas.renderAll(); 
         }
 
         function eliminaSelezionato() {
-            const oggettiSelezionati = canvas.getActiveObjects();
-            if (oggettiSelezionati.length > 0) {
-                canvas.discardActiveObject(); 
-                oggettiSelezionati.forEach(function(oggetto) {
-                    canvas.remove(oggetto); 
+            const selezionati = canvas.getActiveObjects();
+            canvas.discardActiveObject(); 
+            selezionati.forEach(ogg => canvas.remove(ogg));
+        }
+
+        // --- NUOVE FUNZIONI CLOUD ---
+
+        async function salvaMappaSuCloud() {
+            if (JSONBIN_API_KEY.includes('INSERISCI')) {
+                alert("Devi prima inserire la tua API Key e il Bin ID nel codice per poter salvare!");
+                return;
+            }
+
+            // canvas.toJSON() estrae matematicamente tutte le posizioni, colori e forme!
+            const datiMappa = canvas.toJSON();
+            
+            document.getElementById('btn-salva').innerText = "⏳ Salvataggio...";
+
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify(datiMappa)
                 });
+
+                if (response.ok) {
+                    alert("✅ Mappa salvata con successo online!");
+                } else {
+                    alert("❌ Errore durante il salvataggio.");
+                }
+            } catch (error) {
+                console.error("Errore di rete:", error);
+                alert("❌ Errore di connessione a JSONBin.");
+            } finally {
+                document.getElementById('btn-salva').innerText = "💾 Salva Mappa";
+            }
+        }
+
+        async function caricaMappaDaCloud() {
+            if (JSONBIN_API_KEY.includes('INSERISCI')) {
+                alert("Devi prima inserire la tua API Key e il Bin ID nel codice per poter caricare!");
+                return;
+            }
+
+            document.getElementById('btn-carica').innerText = "⏳ Caricamento...";
+
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY
+                    }
+                });
+
+                if (response.ok) {
+                    const json = await response.json();
+                    // JSONBin v3 inserisce i dati dentro la proprietà "record"
+                    const datiSalvati = json.record;
+                    
+                    // Ripristiniamo la mappa dal JSON
+                    canvas.loadFromJSON(datiSalvati, function() {
+                        canvas.renderAll();
+                        // Riapplichiamo lo sfondo per sicurezza, casomai il link andasse perso nel JSON
+                        impostaSfondo();
+                        alert("✅ Mappa caricata con successo!");
+                    });
+                } else {
+                    alert("❌ Nessun salvataggio trovato o errore di caricamento.");
+                }
+            } catch (error) {
+                console.error("Errore di rete:", error);
+                alert("❌ Errore di connessione a JSONBin.");
+            } finally {
+                document.getElementById('btn-carica').innerText = "🔄 Carica Mappa";
             }
         }
 
