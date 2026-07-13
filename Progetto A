@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Mappa Interattiva VTT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background-color: #222; 
+            color: white; 
+            margin: 0;
+            padding: 20px;
+        }
+        #pannello-controllo { 
+            margin-bottom: 15px; 
+            padding: 15px; 
+            background: #333; 
+            border-radius: 8px; 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button { 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 5px; 
+            background: #4CAF50; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        button:hover { background: #45a049; transform: scale(1.05); }
+        #btn-elimina { background: #f44336; }
+        #btn-elimina:hover { background: #da190b; }
+        input[type="color"] { cursor: pointer; border: none; background: transparent; height: 30px; width: 30px; }
+        
+        .canvas-container { border: 3px solid #555; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="pannello-controllo">
+        <button onclick="aggiungiCerchio()">🟢 Aggiungi Cerchio</button>
+        <button onclick="aggiungiQuadrato()">🟦 Aggiungi Quadrato</button>
+        
+        <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 15px;">
+            <label for="sceltaColore">🎨 Colore:</label>
+            <input type="color" id="sceltaColore" value="#ff0000" onchange="cambiaColore(this.value)">
+        </div>
+
+        <button id="btn-elimina" onclick="eliminaSelezionato()">🗑️ Elimina Selezionato</button>
+    </div>
+
+    <canvas id="tavoloCanvas" width="1050" height="700"></canvas>
+
+    <script>
+        const canvas = new fabric.Canvas('tavoloCanvas');
+
+        // Carichiamo l'immagine direttamente dal link di Imgur
+        // NOTA: Abbiamo aggiunto { crossOrigin: 'anonymous' } per evitare blocchi di sicurezza del browser
+        const urlMappa = 'https://i.imgur.com/6hndwGm.jpeg';
+        
+        fabric.Image.fromURL(urlMappa, function(img) {
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                scaleX: canvas.width / img.width,
+                scaleY: canvas.height / img.height
+            });
+        }, { crossOrigin: 'anonymous' });
+
+        function aggiungiCerchio() {
+            const coloreAttuale = document.getElementById('sceltaColore').value;
+            const cerchio = new fabric.Circle({
+                radius: 15,
+                fill: coloreAttuale,
+                left: 100, 
+                top: 100,  
+                borderColor: '#ffffff', 
+                cornerColor: '#ffffff', 
+                cornerSize: 8,
+                transparentCorners: false
+            });
+            canvas.add(cerchio);
+            canvas.setActiveObject(cerchio); 
+        }
+
+        function aggiungiQuadrato() {
+            const coloreAttuale = document.getElementById('sceltaColore').value;
+            const quadrato = new fabric.Rect({
+                width: 30,
+                height: 30,
+                fill: coloreAttuale,
+                left: 150, 
+                top: 100,  
+                borderColor: '#ffffff',
+                cornerColor: '#ffffff',
+                cornerSize: 8,
+                transparentCorners: false
+            });
+            canvas.add(quadrato);
+            canvas.setActiveObject(quadrato);
+        }
+
+        function cambiaColore(nuovoColore) {
+            const oggettiSelezionati = canvas.getActiveObjects();
+            if (oggettiSelezionati.length > 0) {
+                oggettiSelezionati.forEach(function(oggetto) {
+                    oggetto.set('fill', nuovoColore);
+                });
+                canvas.renderAll(); 
+            }
+        }
+
+        function eliminaSelezionato() {
+            const oggettiSelezionati = canvas.getActiveObjects();
+            if (oggettiSelezionati.length > 0) {
+                canvas.discardActiveObject(); 
+                oggettiSelezionati.forEach(function(oggetto) {
+                    canvas.remove(oggetto); 
+                });
+            }
+        }
+
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                eliminaSelezionato();
+            }
+        });
+    </script>
+</body>
+</html>
