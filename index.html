@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Mappa Interattiva VTT - Testo e Salvataggio</title>
+    <title>Mappa Interattiva VTT - Completa</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     
     <style>
@@ -22,7 +22,7 @@
             background: #333; 
             border-radius: 8px; 
             display: flex; 
-            gap: 15px; 
+            gap: 10px; 
             align-items: center; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             flex-wrap: wrap; 
@@ -40,14 +40,18 @@
             transition: 0.2s;
         }
         button:hover { background: #45a049; transform: scale(1.05); }
-        #btn-elimina { background: #f44336; }
-        #btn-elimina:hover { background: #da190b; }
         
-        /* Bottone per il testo */
         #btn-testo { background: #9c27b0; }
         #btn-testo:hover { background: #7b1fa2; }
 
-        #btn-salva { background: #2196F3; margin-left: 20px; }
+        /* Nuovo stile per il bottone linea */
+        #btn-linea { background: #00bcd4; color: black; }
+        #btn-linea:hover { background: #0097a7; color: white; }
+
+        #btn-elimina { background: #f44336; }
+        #btn-elimina:hover { background: #da190b; }
+
+        #btn-salva { background: #2196F3; margin-left: 15px; }
         #btn-salva:hover { background: #0b7dda; }
         #btn-carica { background: #FF9800; }
         #btn-carica:hover { background: #e68a00; }
@@ -55,8 +59,7 @@
         input[type="color"] { cursor: pointer; border: none; background: transparent; height: 30px; width: 30px; }
         .canvas-container { border: 3px solid #555; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
-        /* Istruzioni a schermo */
-        .istruzioni { margin-top: 10px; font-size: 14px; color: #aaa; }
+        .istruzioni { margin-top: 10px; font-size: 14px; color: #aaa; text-align: center; }
     </style>
 </head>
 <body>
@@ -64,24 +67,25 @@
     <div id="pannello-controllo">
         <button onclick="aggiungiCerchio()">🟢 Cerchio</button>
         <button onclick="aggiungiQuadrato()">🟦 Quadrato</button>
+        <button id="btn-linea" onclick="aggiungiLinea()">📏 Linea</button>
+        <button id="btn-testo" onclick="aggiungiTesto()">📝 Testo</button>
         
-        <button id="btn-testo" onclick="aggiungiTesto()">📝 Aggiungi Testo</button>
-        
-        <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 15px;">
+        <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #555; padding-left: 10px;">
             <label for="sceltaColore">🎨 Colore:</label>
             <input type="color" id="sceltaColore" value="#ff0000" onchange="cambiaColore(this.value)">
         </div>
 
         <button id="btn-elimina" onclick="eliminaSelezionato()">🗑️ Elimina</button>
 
-        <button id="btn-salva" onclick="salvaMappaSuCloud()">💾 Salva Mappa</button>
-        <button id="btn-carica" onclick="caricaMappaDaCloud()">🔄 Carica Mappa</button>
+        <button id="btn-salva" onclick="salvaMappaSuCloud()">💾 Salva</button>
+        <button id="btn-carica" onclick="caricaMappaDaCloud()">🔄 Carica</button>
     </div>
 
     <canvas id="tavoloCanvas" width="1050" height="700"></canvas>
     
     <div class="istruzioni">
-        💡 <b>Suggerimento per il testo:</b> Fai <b>doppio clic</b> sul testo per modificarlo. Premi <b>Canc/Delete</b> per eliminare un oggetto selezionato.
+        💡 Puoi ruotare e allungare le <b>Linee</b> tirando i quadratini bianchi ai bordi quando le selezioni.<br>
+        Fai <b>doppio clic</b> sul testo per modificarlo. Premi <b>Canc/Delete</b> per eliminare.
     </div>
 
     <script>
@@ -124,31 +128,47 @@
             canvas.setActiveObject(quadrato);
         }
 
-        // --- NUOVA FUNZIONE PER IL TESTO ---
+        // --- NUOVA FUNZIONE PER LA LINEA ---
+        function aggiungiLinea() {
+            const colore = document.getElementById('sceltaColore').value;
+            // Creiamo una linea dalle coordinate X:50,Y:50 a X:200,Y:50 (una linea orizzontale lunga 150px)
+            const linea = new fabric.Line([50, 50, 200, 50], {
+                left: 150, 
+                top: 150,
+                stroke: colore,      // Per le linee usiamo 'stroke' invece di 'fill'
+                strokeWidth: 5,      // Spessore della linea
+                borderColor: '#ffffff',
+                cornerColor: '#ffffff',
+                cornerSize: 8,
+                transparentCorners: false
+            });
+            canvas.add(linea);
+            canvas.setActiveObject(linea);
+        }
+
         function aggiungiTesto() {
             const colore = document.getElementById('sceltaColore').value;
             const testo = new fabric.IText('Scrivi qui...', {
-                fontFamily: 'Arial',
-                fontSize: 24, // Dimensione del testo
-                fill: colore, // Usa il colore selezionato
-                left: 200, 
-                top: 100,
-                borderColor: '#ffffff', 
-                cornerColor: '#ffffff', 
-                cornerSize: 8, 
-                transparentCorners: false
+                fontFamily: 'Arial', fontSize: 24, fill: colore, left: 200, top: 100,
+                borderColor: '#ffffff', cornerColor: '#ffffff', cornerSize: 8, transparentCorners: false
             });
             canvas.add(testo);
             canvas.setActiveObject(testo);
-            
-            // Entra automaticamente in modalità modifica appena lo crei (opzionale ma comodo)
             testo.enterEditing();
             testo.selectAll();
         }
 
+        // --- FUNZIONE CAMBIA COLORE AGGIORNATA ---
         function cambiaColore(nuovoColore) {
             const selezionati = canvas.getActiveObjects();
-            selezionati.forEach(ogg => ogg.set('fill', nuovoColore));
+            selezionati.forEach(ogg => {
+                // Se è una linea, cambiamo lo 'stroke', altrimenti cambiamo il 'fill'
+                if (ogg.type === 'line') {
+                    ogg.set('stroke', nuovoColore);
+                } else {
+                    ogg.set('fill', nuovoColore);
+                }
+            });
             canvas.renderAll(); 
         }
 
@@ -158,8 +178,7 @@
             selezionati.forEach(ogg => canvas.remove(ogg));
         }
 
-        // --- FUNZIONI CLOUD (Rimaste invariate) ---
-
+        // --- FUNZIONI CLOUD ---
         async function salvaMappaSuCloud() {
             if (JSONBIN_API_KEY.includes('INSERISCI')) {
                 alert("Devi prima inserire la tua API Key!");
@@ -188,7 +207,7 @@
                 console.error("Errore di rete:", error);
                 alert("❌ Errore di connessione a JSONBin.");
             } finally {
-                document.getElementById('btn-salva').innerText = "💾 Salva Mappa";
+                document.getElementById('btn-salva').innerText = "💾 Salva";
             }
         }
 
@@ -224,13 +243,11 @@
                 console.error("Errore di rete:", error);
                 alert("❌ Errore di connessione a JSONBin.");
             } finally {
-                document.getElementById('btn-carica').innerText = "🔄 Carica Mappa";
+                document.getElementById('btn-carica').innerText = "🔄 Carica";
             }
         }
 
-        // Questo controlla che non elimini per sbaglio il testo mentre lo stai scrivendo!
         window.addEventListener('keydown', function(event) {
-            // Controlla se stai modificando un testo. Se sì, non esegue l'eliminazione.
             const oggettoAttivo = canvas.getActiveObject();
             if (oggettoAttivo && oggettoAttivo.isEditing) {
                 return;
